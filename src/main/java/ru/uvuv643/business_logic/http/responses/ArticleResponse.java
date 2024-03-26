@@ -16,6 +16,7 @@ public class ArticleResponse {
     private String fileLink;
     private String version;
     private String createdAt;
+    private Double price;
     private ModerationStatus status;
     private User user;
     private List<ArticleAttachmentResponse> attachments;
@@ -27,6 +28,7 @@ public class ArticleResponse {
         this.fileLink = article.getFileLink();
         this.version = article.getVersion();
         this.status = article.getStatus();
+        this.price = article.getPrice();
         this.createdAt = article.getCreatedAt().toLocalDateTime().toString();
         this.attachments = article.getArticleAttachments().stream().map(ArticleAttachmentResponse::new).collect(Collectors.toList());
         this.user = article.getUser();
@@ -102,5 +104,21 @@ public class ArticleResponse {
 
     public void setStatus(ModerationStatus status) {
         this.status = status;
+    }
+
+    @Override
+    public String toString() {
+        return "ArticleResponse{" +
+                "id=" + id +
+                ", title='" + title + '\'' +
+                ", content='" + content + '\'' +
+                ", fileLink='" + fileLink + '\'' +
+                ", version='" + version + '\'' +
+                ", createdAt='" + createdAt + '\'' +
+                ", price=" + price +
+                ", status=" + status +
+                ", user=" + user +
+                ", attachments=" + attachments +
+                '}';
     }
 }

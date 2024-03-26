@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import ru.uvuv643.business_logic.enums.ModerationStatusEnum;
 import ru.uvuv643.business_logic.http.requests.ArticleRequest;
 import ru.uvuv643.business_logic.http.requests.GetArticlesRequest;
+import ru.uvuv643.business_logic.http.responses.ArticlePreviewResponse;
 import ru.uvuv643.business_logic.http.responses.ArticleResponse;
 import ru.uvuv643.business_logic.models.Article;
 import ru.uvuv643.business_logic.models.ArticleAttachment;
@@ -16,6 +17,7 @@ import ru.uvuv643.business_logic.models.User;
 import ru.uvuv643.business_logic.repositories.ArticleRepository;
 import ru.uvuv643.business_logic.repositories.AttachmentRepository;
 import ru.uvuv643.business_logic.repositories.ModerationStatusRepository;
+import ru.uvuv643.business_logic.services.ArticleGuardService;
 import ru.uvuv643.business_logic.services.AuthService;
 
 import java.util.*;
@@ -28,17 +30,20 @@ public class ArticleController {
     private final AttachmentRepository attachmentRepository;
     private final ModerationStatusRepository statusRepository;
     private final AuthService authService;
+    private final ArticleGuardService articleGuardService;
 
     public ArticleController(
             ArticleRepository articleRepository,
             AttachmentRepository attachmentRepository,
             ModerationStatusRepository statusRepository,
-            AuthService authService
+            AuthService authService,
+            ArticleGuardService articleGuardService
     ) {
         this.articleRepository = articleRepository;
         this.attachmentRepository = attachmentRepository;
         this.statusRepository = statusRepository;
         this.authService = authService;
+        this.articleGuardService = articleGuardService;
     }
 
     @RequestMapping(value = "/articles", method = RequestMethod.POST)
@@ -53,6 +58,7 @@ public class ArticleController {
                 User user = userOptional.get();
                 Article createdArticle = new Article();
                 createdArticle.setTitle(request.getTitle());
+                createdArticle.setPrice(request.getPrice());
                 createdArticle.setContent(request.getContent());
                 createdArticle.setFileLink(request.getFileLink());
                 createdArticle.setVersion(request.getVersion());
@@ -86,11 +92,38 @@ public class ArticleController {
             }
             List<Article> articles = (List<Article>) articleRepository.findAll();
             return articles.stream().map(ArticleResponse::new);
-        } else if (authService.isUser(authToken)) {
-            List<Article> articles = articleRepository.findByStatusId(ModerationStatus.statuses.get(ModerationStatusEnum.ACCEPTED));
-            return articles.stream().map(ArticleResponse::new);
         }
-        return new ResponseEntity<>("У вас нет прав на просмотр статей", HttpStatus.FORBIDDEN);
+        List<Article> articles = articleRepository.findByStatusId(ModerationStatus.statuses.get(ModerationStatusEnum.ACCEPTED));
+        return articles.stream().map(ArticlePreviewResponse::new);
+    }
+
+    @RequestMapping(value = "/articles/{id}", method = RequestMethod.GET)
+    @ResponseBody
+    public Object allArticles(@PathVariable(value = "id") Long id, @CookieValue(value = "access-token", required = false) String authToken) {
+        Optional<Article> article = articleRepository.findById(id);
+        if (article.isPresent()) {
+            if (authService.isAdmin(authToken)) {
+                return new ArticleResponse(article.get());
+            } else {
+                boolean isAvailableToReadFull = false;
+                if (authService.isUser(authToken)) {
+                    Optional<User> currentUser = authService.getUser(authToken);
+                    if (currentUser.isPresent()) {
+                        isAvailableToReadFull = articleGuardService.canViewArticle(currentUser.get(), article.get());
+                        if (Objects.equals(article.get().getUser().getId(), currentUser.get().getId())) {
+                            isAvailableToReadFull = true;
+                        }
+                    }
+                }
+                if (isAvailableToReadFull) {
+                    return new ArticleResponse(article.get());
+                } else {
+                    return new ArticlePreviewResponse(article.get());
+                }
+            }
+        } else {
+            return new ResponseEntity<>("Не найдено такой статьи", HttpStatus.NOT_FOUND);
+        }
     }
 
     @RequestMapping(value = "/articles/my", method = RequestMethod.GET)
@@ -109,7 +142,8 @@ public class ArticleController {
 
     @RequestMapping(value = "/articles/{id}", method = RequestMethod.PUT)
     @ResponseBody
-    public Object updateArticle(@PathVariable(value = "id") Long id, @RequestBody ArticleRequest request, @CookieValue(value = "access-token", required = false) String authToken) {
+    public Object updateArticle(@PathVariable(value = "id") Long id, @RequestBody ArticleRequest
+            request, @CookieValue(value = "access-token", required = false) String authToken) {
         Optional<Article> targetArticle = articleRepository.findById(id);
         if (targetArticle.isEmpty()) {
             return new ResponseEntity<>("Не найдено такой статьи", HttpStatus.NOT_FOUND);
@@ -120,11 +154,12 @@ public class ArticleController {
             Optional<User> userOptional = authService.getUser(authToken);
             if (userOptional.isPresent()) {
                 User user = userOptional.get();
-                if (!Objects.equals(article.getUser().getId(), user.getId())) {
+                if (!authService.isAdmin(authToken) && !Objects.equals(article.getUser().getId(), user.getId())) {
                     return new ResponseEntity<>("Это не ваша статья!!!", HttpStatus.FORBIDDEN);
                 }
                 if (request.getContent() != null) article.setContent(request.getContent());
                 if (request.getTitle() != null) article.setTitle(request.getTitle());
+                if (request.getPrice() != null) article.setPrice(request.getPrice());
                 if (request.getVersion() != null) article.setVersion(request.getVersion());
                 if (request.getFileLink() != null) article.setFileLink(request.getFileLink());
 
@@ -165,7 +200,8 @@ public class ArticleController {
 
     @RequestMapping(value = "/articles/{id}", method = RequestMethod.DELETE)
     @ResponseBody
-    public Object deleteArticle(@PathVariable(value = "id") Long id, @CookieValue(value = "access-token", required = false) String authToken) {
+    public Object deleteArticle(@PathVariable(value = "id") Long
+                                        id, @CookieValue(value = "access-token", required = false) String authToken) {
         Optional<Article> targetArticle = articleRepository.findById(id);
         if (targetArticle.isEmpty()) {
             return new ResponseEntity<>("Не найдено такой статьи", HttpStatus.NOT_FOUND);

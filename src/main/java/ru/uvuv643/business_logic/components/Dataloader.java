@@ -44,7 +44,7 @@ public class Dataloader implements ApplicationRunner {
                 List<AbstractSeeder> currentDefaultObjects = (List<AbstractSeeder>) currentClass.getMethod("getDefaultObjects").invoke(object);
                 for (var x : currentDefaultObjects) {
                     if (em.find(currentClass, x.getId()) == null) {
-                        em.persist(x);
+                        em.merge(x);
                     }
                 }
             } catch (NoSuchMethodException exception) {

@@ -27,6 +27,9 @@ public class Article {
     private String version;
 
     @Column
+    private double price;
+
+    @Column
     @CurrentTimestamp
     private Timestamp createdAt;
 
@@ -112,5 +115,29 @@ public class Article {
 
     public void setStatus(ModerationStatus status) {
         this.status = status;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
+    @Override
+    public String toString() {
+        return "Article{" +
+                "id=" + id +
+                ", title='" + title + '\'' +
+                ", content='" + content + '\'' +
+                ", fileLink='" + fileLink + '\'' +
+                ", version='" + version + '\'' +
+                ", price=" + price +
+                ", createdAt=" + createdAt +
+                ", user=" + user +
+                ", status=" + status +
+                ", articleAttachments=" + articleAttachments +
+                '}';
     }
 }

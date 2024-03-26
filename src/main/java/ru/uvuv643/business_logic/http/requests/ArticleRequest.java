@@ -24,6 +24,9 @@ public class ArticleRequest {
     private String version;
 
     @NotNull
+    private Double price;
+
+    @NotNull
     private List<Long> attachmentIds;
 
     private Long statusId;
@@ -74,5 +77,13 @@ public class ArticleRequest {
 
     public void setStatusId(Long statusId) {
         this.statusId = statusId;
+    }
+
+    public Double getPrice() {
+        return price;
+    }
+
+    public void setPrice(Double price) {
+        this.price = price;
     }
 }

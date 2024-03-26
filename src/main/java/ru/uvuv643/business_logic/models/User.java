@@ -1,11 +1,8 @@
 package ru.uvuv643.business_logic.models;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import org.hibernate.validator.constraints.UniqueElements;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,6 +31,20 @@ public class User {
             joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"),
             inverseJoinColumns = @JoinColumn(name = "role_id", referencedColumnName = "id"))
     private Set<Role> roles = new HashSet<>();
+
+    @OneToMany
+    @JoinColumn(name = "user_id")
+    @JsonIgnore
+    private List<Subscription> subscriptions;
+
+    @JsonIgnore
+    public double getTotalCoins() {
+        double coins = 0.0;
+        for (Subscription s: this.getSubscriptions()) {
+            coins += s.getCoinsLeft();
+        }
+        return coins;
+    }
 
     public void setId(Long id) {
         this.id = id;
@@ -73,5 +84,13 @@ public class User {
 
     public void setToken(String token) {
         this.token = token;
+    }
+
+    public List<Subscription> getSubscriptions() {
+        return subscriptions;
+    }
+
+    public void setSubscriptions(List<Subscription> subscriptions) {
+        this.subscriptions = subscriptions;
     }
 }
